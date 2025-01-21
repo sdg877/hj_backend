@@ -1,8 +1,27 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import News from "../models/newsModel.js";
+import s3 from "../../config/awsConfig.js";
 
 dotenv.config();
+
+export const uploadImageToS3 = async (fileBuffer, fileName, mimeType) => {
+  const params = {
+    Bucket: process.env.AWS_BUCKET_NAME,
+    Key: fileName,
+    Body: fileBuffer,
+    ContentType: mimeType,
+    ACL: "public-read",
+  };
+
+  try {
+    const uploadResult = await s3.upload(params).promise();
+    return uploadResult;
+  } catch (error) {
+    console.error("Error uploading to S3:", error);
+    throw error;
+  }
+};
 
 export const addNewsUpdate = async (req, res) => {
   const { title, comment } = req.body;

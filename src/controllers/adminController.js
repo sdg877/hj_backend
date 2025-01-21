@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import News from "../models/newsModel";
+import News from "../models/newsModel.js";
 
 dotenv.config();
 

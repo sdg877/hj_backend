@@ -2,26 +2,14 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import News from "../models/newsModel.js";
 import s3 from "../../config/awsConfig.js";
+import multer from "multer";
 
 dotenv.config();
 
-export const uploadImageToS3 = async (fileBuffer, fileName, mimeType) => {
-  const params = {
-    Bucket: process.env.AWS_BUCKET_NAME,
-    Key: fileName,
-    Body: fileBuffer,
-    ContentType: mimeType,
-    ACL: "public-read",
-  };
-
-  try {
-    const uploadResult = await s3.upload(params).promise();
-    return uploadResult;
-  } catch (error) {
-    console.error("Error uploading to S3:", error);
-    throw error;
-  }
-};
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+});
 
 export const addNewsUpdate = async (req, res) => {
   const { title, comment } = req.body;
@@ -31,9 +19,20 @@ export const addNewsUpdate = async (req, res) => {
   }
 
   try {
+    let imageUrl = null;
+    if (req.file) {
+      const fileBuffer = req.file.buffer;
+      const fileName = `${Date.now()}_${req.file.originalname}`;
+      const mimeType = req.file.mimetype;
+
+      const uploadResult = await uploadImageToS3(fileBuffer, fileName, mimeType);
+      imageUrl = uploadResult.Location; // S3 file URL
+    }
+
     const newNewsUpdate = {
       title,
       comment,
+      imageUrl, // Add the image URL
       timestamp: new Date(),
     };
 
@@ -54,6 +53,24 @@ export const addNewsUpdate = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const uploadImageToS3 = async (fileBuffer, fileName, mimeType) => {
+  const params = {
+    Bucket: process.env.AWS_BUCKET_NAME,
+    Key: fileName,
+    Body: fileBuffer,
+    ContentType: mimeType,
+    ACL: "public-read",
+  };
+
+  try {
+    const uploadResult = await s3.upload(params).promise();
+    return uploadResult;
+  } catch (error) {
+    console.error("Error uploading to S3:", error);
+    throw error;
   }
 };
 

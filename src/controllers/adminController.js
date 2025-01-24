@@ -17,17 +17,18 @@ const uploadImageToS3 = async (fileBuffer, fileName, mimeType) => {
     Key: fileName,
     Body: fileBuffer,
     ContentType: mimeType,
-    ACL: "public-read",
   };
 
   try {
     const uploadResult = await s3.upload(params).promise();
-    return uploadResult.Location; // Return the image URL
+    console.log('S3 upload result:', uploadResult);
+    return uploadResult.Location;
   } catch (error) {
-    console.error("Error uploading to S3:", error);
+    console.error('Error uploading to S3:', error);
     throw error;
   }
 };
+
 
 export const loginAdmin = (req, res) => {
   const { username, password } = req.body;
@@ -45,6 +46,9 @@ export const loginAdmin = (req, res) => {
 };
 
 export const uploadImageOnly = async (req, res) => {
+  console.log('Incoming request:', req.body); // Logs the body of the request
+  console.log('File received:', req.file); // Logs the file received
+
   if (!req.file) {
     return res.status(400).json({ message: "No file provided." });
   }
@@ -54,11 +58,15 @@ export const uploadImageOnly = async (req, res) => {
     const fileName = `${Date.now()}_${req.file.originalname}`;
     const mimeType = req.file.mimetype;
 
+    console.log('File details:', { fileName, mimeType }); // Logs file details
+
     const imageUrl = await uploadImageToS3(fileBuffer, fileName, mimeType);
+
+    console.log('S3 upload result:', imageUrl); // Logs the image URL after successful upload
 
     res.status(201).json({ message: "Image uploaded successfully", imageUrl });
   } catch (error) {
-    console.error(error);
+    console.error('Error uploading image:', error); // Logs error during image upload
     res.status(500).json({ message: "Error uploading image" });
   }
 };

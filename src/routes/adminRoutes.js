@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticateJWT } from "../../config/auth.js"; // Ensure correct path
+import { authenticateJWT } from "../../config/auth.js"; 
 import {
   loginAdmin,
   addNewsOnly,
@@ -12,7 +12,6 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.post("/login", loginAdmin);
-
 
 router.post("/news", authenticateJWT, addNewsOnly);
 router.post("/images", authenticateJWT, upload.single("image"), uploadImageOnly);

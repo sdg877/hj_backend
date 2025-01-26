@@ -12,7 +12,16 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 app.use(express.json());
-app.use(cors());
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
 
 app.use("/admin", adminRoutes);
 

@@ -6,7 +6,7 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
 });
 
-// Function to fetch images by category
+
 const getImagesByCategory = async (req, res) => {
   const { category } = req.params;
 

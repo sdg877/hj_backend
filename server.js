@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
+import siteRoutes from "./src/routes/siteRoutes.js"
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use(
 );
 
 app.use("/admin", adminRoutes);
+app.use("/", siteRoutes)
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

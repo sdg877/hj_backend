@@ -46,8 +46,8 @@ export const loginAdmin = (req, res) => {
 };
 
 export const uploadImageOnly = async (req, res) => {
-  console.log('Incoming request:', req.body); // Logs the body of the request
-  console.log('File received:', req.file); // Logs the file received
+  console.log('Incoming request:', req.body); 
+  console.log('File received:', req.file); 
 
   if (!req.file) {
     return res.status(400).json({ message: "No file provided." });
@@ -58,15 +58,15 @@ export const uploadImageOnly = async (req, res) => {
     const fileName = `${Date.now()}_${req.file.originalname}`;
     const mimeType = req.file.mimetype;
 
-    console.log('File details:', { fileName, mimeType }); // Logs file details
+    console.log('File details:', { fileName, mimeType }); 
 
     const imageUrl = await uploadImageToS3(fileBuffer, fileName, mimeType);
 
-    console.log('S3 upload result:', imageUrl); // Logs the image URL after successful upload
+    console.log('S3 upload result:', imageUrl);
 
     res.status(201).json({ message: "Image uploaded successfully", imageUrl });
   } catch (error) {
-    console.error('Error uploading image:', error); // Logs error during image upload
+    console.error('Error uploading image:', error); 
     res.status(500).json({ message: "Error uploading image" });
   }
 };

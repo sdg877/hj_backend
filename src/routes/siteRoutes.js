@@ -1,8 +1,8 @@
-const express = require('express');
-const { getImagesByCategory } = require('../controllers/imageController');
+import express from "express";
+import { getImagesByCategory } from "../controllers/siteController.js";
 
 const router = express.Router();
 
-router.get('/images/:category', getImagesByCategory);
+router.get('/gallery/:category', getImagesByCategory);
 
-module.exports = router;
+export default router;

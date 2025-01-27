@@ -1,4 +1,4 @@
-const AWS = require('aws-sdk');
+import AWS from "aws-sdk";
 
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID, // Set your AWS credentials
@@ -6,33 +6,23 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
 });
 
-
-const getImagesByCategory = async (req, res) => {
+export const getImagesByCategory = async (req, res) => {
   const { category } = req.params;
 
   const params = {
-    Bucket: process.env.AWS_S3_BUCKET_NAME, 
-    Prefix: category + '/', 
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Prefix: `${category}/`,
   };
 
   try {
     const data = await s3.listObjectsV2(params).promise();
-    const images = data.Contents.map((item) => ({
-      fileName: item.Key.split('/').pop(), // Extract file name
-      fileUrl: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${item.Key}`,
-    }));
-
-    if (!images.length) {
-      return res.status(404).json({ message: `No images found for category ${category}` });
-    }
-
-    return res.status(200).json({ images });
+    const imageUrls = data.Contents.map(
+      (item) =>
+        `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${item.Key}`
+    );
+    res.json({ images: imageUrls });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Error fetching images from S3.' });
+    console.error("Error retrieving images:", error);
+    res.status(500).json({ message: "Error retrieving images" });
   }
-};
-
-module.exports = {
-  getImagesByCategory,
 };

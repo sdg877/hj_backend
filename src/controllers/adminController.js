@@ -53,26 +53,23 @@ export const uploadImageOnly = async (req, res) => {
 };
 
 const uploadImageToS3 = async (fileBuffer, fileName, mimeType, category) => {
-  // Ensure the category is sanitized (only letters, numbers, hyphens, underscores)
   const sanitizedCategory = category
     ? category.replace(/[^a-zA-Z0-9-_]/g, "")
     : "default";
 
-  // Construct the S3 key (path)
   const key = `${sanitizedCategory}/${fileName}`;
 
   const params = {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Key: key, // Use category and file name for the S3 path
+    Key: key, 
     Body: fileBuffer,
     ContentType: mimeType,
-    ACL: "public-read", // Optional: makes the file publicly accessible
   };
 
   try {
     const uploadResult = await s3.upload(params).promise();
     console.log("S3 upload result:", uploadResult);
-    return uploadResult.Location; // URL of the uploaded image
+    return uploadResult.Location; 
   } catch (error) {
     console.error("Error uploading to S3:", error);
     throw error;

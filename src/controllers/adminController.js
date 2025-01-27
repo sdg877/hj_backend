@@ -11,25 +11,6 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
-const uploadImageToS3 = async (fileBuffer, fileName, mimeType) => {
-  const params = {
-    Bucket: process.env.AWS_BUCKET_NAME,
-    Key: fileName,
-    Body: fileBuffer,
-    ContentType: mimeType,
-  };
-
-  try {
-    const uploadResult = await s3.upload(params).promise();
-    console.log('S3 upload result:', uploadResult);
-    return uploadResult.Location;
-  } catch (error) {
-    console.error('Error uploading to S3:', error);
-    throw error;
-  }
-};
-
-
 export const loginAdmin = (req, res) => {
   const { username, password } = req.body;
 
@@ -46,8 +27,8 @@ export const loginAdmin = (req, res) => {
 };
 
 export const uploadImageOnly = async (req, res) => {
-  console.log('Incoming request:', req.body); 
-  console.log('File received:', req.file); 
+  console.log("Incoming request:", req.body);
+  console.log("File received:", req.file);
 
   if (!req.file) {
     return res.status(400).json({ message: "No file provided." });
@@ -58,16 +39,43 @@ export const uploadImageOnly = async (req, res) => {
     const fileName = `${Date.now()}_${req.file.originalname}`;
     const mimeType = req.file.mimetype;
 
-    console.log('File details:', { fileName, mimeType }); 
+    console.log("File details:", { fileName, mimeType });
 
     const imageUrl = await uploadImageToS3(fileBuffer, fileName, mimeType);
 
-    console.log('S3 upload result:', imageUrl);
+    console.log("S3 upload result:", imageUrl);
 
     res.status(201).json({ message: "Image uploaded successfully", imageUrl });
   } catch (error) {
-    console.error('Error uploading image:', error); 
+    console.error("Error uploading image:", error);
     res.status(500).json({ message: "Error uploading image" });
+  }
+};
+
+const uploadImageToS3 = async (fileBuffer, fileName, mimeType, category) => {
+  // Ensure the category is sanitized (only letters, numbers, hyphens, underscores)
+  const sanitizedCategory = category
+    ? category.replace(/[^a-zA-Z0-9-_]/g, "")
+    : "default";
+
+  // Construct the S3 key (path)
+  const key = `${sanitizedCategory}/${fileName}`;
+
+  const params = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Key: key, // Use category and file name for the S3 path
+    Body: fileBuffer,
+    ContentType: mimeType,
+    ACL: "public-read", // Optional: makes the file publicly accessible
+  };
+
+  try {
+    const uploadResult = await s3.upload(params).promise();
+    console.log("S3 upload result:", uploadResult);
+    return uploadResult.Location; // URL of the uploaded image
+  } catch (error) {
+    console.error("Error uploading to S3:", error);
+    throw error;
   }
 };
 
@@ -141,12 +149,10 @@ export const addNewsWithImage = async (req, res) => {
       await newNews.save();
     }
 
-    res
-      .status(201)
-      .json({
-        message: "News update with image added successfully",
-        newNewsUpdate,
-      });
+    res.status(201).json({
+      message: "News update with image added successfully",
+      newNewsUpdate,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error adding news update with image" });

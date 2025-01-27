@@ -6,6 +6,7 @@ import adminRoutes from "./src/routes/adminRoutes.js";
 import siteRoutes from "./src/routes/siteRoutes.js"
 
 dotenv.config();
+console.log("AWS_S3_BUCKET_NAME:", process.env.AWS_S3_BUCKET_NAME);
 
 const app = express();
 const PORT = process.env.PORT || 5000;

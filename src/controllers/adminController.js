@@ -27,11 +27,17 @@ export const loginAdmin = (req, res) => {
 };
 
 export const uploadImageOnly = async (req, res) => {
+  const { category } = req.body; 
+
   console.log("Incoming request:", req.body);
   console.log("File received:", req.file);
 
   if (!req.file) {
     return res.status(400).json({ message: "No file provided." });
+  }
+
+  if (!category) {
+    return res.status(400).json({ message: "Category is required." });
   }
 
   try {
@@ -41,7 +47,12 @@ export const uploadImageOnly = async (req, res) => {
 
     console.log("File details:", { fileName, mimeType });
 
-    const imageUrl = await uploadImageToS3(fileBuffer, fileName, mimeType);
+    const imageUrl = await uploadImageToS3(
+      fileBuffer,
+      fileName,
+      mimeType,
+      category
+    ); 
 
     console.log("S3 upload result:", imageUrl);
 
@@ -61,7 +72,7 @@ const uploadImageToS3 = async (fileBuffer, fileName, mimeType, category) => {
 
   const params = {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Key: key, 
+    Key: key,
     Body: fileBuffer,
     ContentType: mimeType,
   };
@@ -69,7 +80,7 @@ const uploadImageToS3 = async (fileBuffer, fileName, mimeType, category) => {
   try {
     const uploadResult = await s3.upload(params).promise();
     console.log("S3 upload result:", uploadResult);
-    return uploadResult.Location; 
+    return uploadResult.Location;
   } catch (error) {
     console.error("Error uploading to S3:", error);
     throw error;

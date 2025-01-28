@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import News from "../models/newsModel.js";
 import s3 from "../../config/awsConfig.js";
 import multer from "multer";
+import AWS from "aws-sdk";
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ const upload = multer({
 const uploadImageToS3 = async (fileBuffer, fileName, mimeType, category) => {
   const params = {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Key: `uploads/${category}/${fileName}`, 
+    Key: `uploads/${category}/${fileName}`,
     Body: fileBuffer,
     ContentType: mimeType,
   };
@@ -26,7 +27,6 @@ const uploadImageToS3 = async (fileBuffer, fileName, mimeType, category) => {
     throw new Error("Error uploading image to S3: " + error.message);
   }
 };
-
 
 export const loginAdmin = (req, res) => {
   const { username, password } = req.body;
@@ -52,13 +52,17 @@ export const deleteImage = async (req, res) => {
 
   try {
     const key = imageUrl.split("amazonaws.com/")[1];
+    console.log("Key being used for deletion:", key);
 
     const params = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: key,
     };
 
+    console.log("Params for deletion:", params);
+
     await s3.deleteObject(params).promise();
+
     res.json({ message: "Image deleted successfully." });
   } catch (error) {
     console.error("Error deleting image:", error);
@@ -68,9 +72,6 @@ export const deleteImage = async (req, res) => {
 
 export const uploadImage = async (req, res) => {
   const { category } = req.body;
-
-  console.log("Incoming request:", req.body);
-  console.log("File received:", req.file);
 
   if (!req.file) {
     return res.status(400).json({ message: "No file provided." });
@@ -85,16 +86,12 @@ export const uploadImage = async (req, res) => {
     const fileName = `${Date.now()}_${req.file.originalname}`;
     const mimeType = req.file.mimetype;
 
-    console.log("File details:", { fileName, mimeType });
-
     const imageUrl = await uploadImageToS3(
       fileBuffer,
       fileName,
       mimeType,
       category
     );
-
-    console.log("S3 upload result:", imageUrl);
 
     res.status(201).json({ message: "Image uploaded successfully", imageUrl });
   } catch (error) {
@@ -188,5 +185,46 @@ export const deleteNews = async (req, res) => {
   } catch (error) {
     console.error("Error deleting news:", error);
     res.status(500).json({ message: "Error deleting news" });
+  }
+};
+
+export const getImage = async (req, res) => {
+  const s3 = new AWS.S3();
+
+  // Define parameters for S3 bucket
+  const params = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+  };
+
+  try {
+    // Get the list of objects in the S3 bucket
+    const data = await s3.listObjectsV2(params).promise();
+
+    // Log the data to inspect its contents
+    console.log("S3 List Objects Response:", data);
+
+    if (!data.Contents || data.Contents.length === 0) {
+      console.log("No images found.");
+      return res.status(404).json({ message: "No images found" });
+    }
+
+    // Map over the objects to create URLs (assuming you want to return URLs for images)
+    const images = data.Contents.map((item) => {
+      // Log each item to see the file paths
+      console.log("Image item:", item);
+
+      // Assuming the image path is structured like 'uploads/<category>/image.jpg'
+      const category = item.Key.split("/")[1]; // Get the category name
+
+      return {
+        url: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${item.Key}`,
+        category: category, // Use the category name derived from the key
+      };
+    });
+
+    res.json({ images });
+  } catch (err) {
+    console.error("Error fetching images:", err);
+    res.status(500).json({ message: "Failed to load images" });
   }
 };

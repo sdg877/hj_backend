@@ -49,7 +49,7 @@ export const deleteImage = async (req, res) => {
   }
 };
 
-export const uploadImageOnly = async (req, res) => {
+export const uploadImage = async (req, res) => {
   const { category } = req.body;
 
   console.log("Incoming request:", req.body);

@@ -3,7 +3,7 @@ import { authenticateJWT } from "../../config/auth.js";
 import {
   loginAdmin,
   addNews,
-  uploadImageOnly,
+  uploadImage,
   deleteImage, 
   updateNews,
   deleteNews
@@ -17,7 +17,7 @@ router.post("/login", loginAdmin);
 router.post("/news", authenticateJWT, addNews);
 router.put("/updatenews/:newsId", authenticateJWT, updateNews);
 router.delete("/deletenews/:newsId", authenticateJWT, deleteNews);
-router.post("/images", authenticateJWT, upload.single("image"), uploadImageOnly);
+router.post("/images", authenticateJWT, upload.single("image"), uploadImage);
 router.delete("/deleteimage", authenticateJWT, deleteImage);
 
 export default router;

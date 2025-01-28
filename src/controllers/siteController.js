@@ -12,7 +12,7 @@ export const getImagesByCategory = async (req, res) => {
 
   const params = {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Prefix: `${category}/`,
+    Prefix: `uploads/${category}/`,
   };
 
   try {

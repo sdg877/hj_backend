@@ -11,6 +11,23 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+const uploadImageToS3 = async (fileBuffer, fileName, mimeType, category) => {
+  const params = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Key: `uploads/${category}/${fileName}`, 
+    Body: fileBuffer,
+    ContentType: mimeType,
+  };
+
+  try {
+    const data = await s3.upload(params).promise();
+    return data.Location;
+  } catch (error) {
+    throw new Error("Error uploading image to S3: " + error.message);
+  }
+};
+
+
 export const loginAdmin = (req, res) => {
   const { username, password } = req.body;
 

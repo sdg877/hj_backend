@@ -44,51 +44,6 @@ export const loginAdmin = (req, res) => {
   res.json({ token });
 };
 
-// export const deleteImage = async (req, res) => {
-//   // 2. JWT Authentication Check (using your authenticateJWT middleware)
-//   authenticateJWT(req, res, async () => {  // Wrap the delete logic in the middleware
-//     const { imageUrl } = req.body;
-
-//     if (!imageUrl) {
-//       return res.status(400).json({ message: "Image URL is required." });
-//     }
-
-//     try {
-//       const parsedUrl = new URL(imageUrl);
-//       const pathname = parsedUrl.pathname;
-//       const key = pathname.substring(1);
-
-//       const params = {
-//         Bucket: process.env.AWS_S3_BUCKET_NAME,
-//         Key: key,
-//       };
-
-//       console.log("Deleting image with params:", params);
-
-//       const data = await s3.deleteObject(params).promise();
-
-//       if (data.$metadata.httpStatusCode === 204) {
-//         res.json({ message: "Image deleted successfully." });
-//       } else {
-//         console.error(`S3 DeleteObject failed with status code: ${data.$metadata.httpStatusCode}`);
-//         console.error("Response:", data);
-//         res.status(500).json({ message: "Error deleting image." });
-//       }
-
-//     } catch (error) {
-//       console.error("Error deleting image:", error);
-//       if (error.code === 'AccessDenied') {
-//         res.status(403).json({
-//           message: "Access denied. Please check IAM permissions, bucket policy, and ensure AWS credentials are correctly configured and the correct region is set.",
-//           error: error
-//         });
-//       } else {
-//         res.status(500).json({ message: "Error deleting image.", error });
-//       }
-//     }
-//   }); // End of authenticateJWT middleware
-// };
-
 export const deleteImage = async (req, res) => {
   authenticateJWT(req, res, async () => {
     const { imageUrl } = req.body;
@@ -107,34 +62,21 @@ export const deleteImage = async (req, res) => {
         Key: key,
       };
 
-      console.log(
-        "Deleting image with params:",
-        JSON.stringify(params, null, 2)
-      ); // <-- CRUCIAL LOGGING: Log params including Key
+      await s3.deleteObject(params).promise();
 
-      const data = await s3.deleteObject(params).promise();
-
-      console.log("S3 DeleteObject Response:", JSON.stringify(data, null, 2)); // <-- Log the S3 response
-
-      if (data.$metadata.httpStatusCode === 204) {
-        res.json({ message: "Image deleted successfully." });
-      } else {
-        console.error(
-          `S3 DeleteObject failed with status code: ${data.$metadata.httpStatusCode}`
-        );
-        console.error("Response:", data);
-        res.status(500).json({ message: "Error deleting image." });
-      }
+      res.json({ message: "Image deleted successfully." });
     } catch (error) {
       console.error("Error deleting image:", error);
       if (error.code === "AccessDenied") {
         res.status(403).json({
           message:
-            "Access denied. Please check IAM permissions, bucket policy, and ensure AWS credentials are correctly configured and the correct region is set.",
-          error: error,
+            "Access denied. Please check IAM permissions, bucket policy, and ensure AWS credentials are correctly configured.",
+          error: error.message,
         });
       } else {
-        res.status(500).json({ message: "Error deleting image.", error });
+        res
+          .status(500)
+          .json({ message: "Error deleting image.", error: error.message });
       }
     }
   });

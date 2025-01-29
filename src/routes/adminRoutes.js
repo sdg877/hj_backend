@@ -7,7 +7,8 @@ import {
   deleteImage, 
   updateNews,
   deleteNews,
-  getImage
+  getImage,
+  getSingleNews
 } from "../controllers/adminController.js";
 import multer from "multer";
 
@@ -20,6 +21,7 @@ router.put("/updatenews/:newsId", authenticateJWT, updateNews);
 router.delete("/deletenews/:newsId", authenticateJWT, deleteNews);
 router.post("/images", authenticateJWT, upload.single("image"), uploadImage);
 router.get("/thumbnails", getImage)
-router.delete("/deleteimage", authenticateJWT, deleteImage);
+router.delete("/deleteimage", deleteImage);
+router.get("/getnews/:id", getSingleNews)
 
 export default router;

@@ -4,12 +4,21 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const authenticateJWT = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ message: "Unauthorized" });
+  const authHeader = req.headers.authorization;
 
-  jwt.verify(token, process.env.SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: "Forbidden" });
-    req.user = user;
-    next();
-  });
+  if (authHeader) {
+    const token = authHeader.split(" ")[1];
+
+    jwt.verify(token, process.env.SECRET, (err, user) => {
+      if (err) {
+        console.error("JWT Verification Error:", err); // Log the error
+        return res.sendStatus(403);
+      }
+
+      req.user = user;
+      next();
+    });
+  } else {
+    res.sendStatus(401);
+  }
 };

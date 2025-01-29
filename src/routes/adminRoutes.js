@@ -21,7 +21,7 @@ router.put("/updatenews/:newsId", authenticateJWT, updateNews);
 router.delete("/deletenews/:newsId", authenticateJWT, deleteNews);
 router.post("/images", authenticateJWT, upload.single("image"), uploadImage);
 router.get("/thumbnails", getImage)
-router.delete("/deleteimage", deleteImage);
+router.delete("/delete", deleteImage);
 router.get("/getnews/:id", getSingleNews)
 
 export default router;

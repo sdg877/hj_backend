@@ -4,6 +4,7 @@ import News from "../models/newsModel.js";
 import s3 from "../../config/awsConfig.js";
 import multer from "multer";
 import AWS from "aws-sdk";
+import { authenticateJWT } from "../../config/auth.js";
 
 dotenv.config();
 
@@ -43,31 +44,100 @@ export const loginAdmin = (req, res) => {
   res.json({ token });
 };
 
+// export const deleteImage = async (req, res) => {
+//   // 2. JWT Authentication Check (using your authenticateJWT middleware)
+//   authenticateJWT(req, res, async () => {  // Wrap the delete logic in the middleware
+//     const { imageUrl } = req.body;
+
+//     if (!imageUrl) {
+//       return res.status(400).json({ message: "Image URL is required." });
+//     }
+
+//     try {
+//       const parsedUrl = new URL(imageUrl);
+//       const pathname = parsedUrl.pathname;
+//       const key = pathname.substring(1);
+
+//       const params = {
+//         Bucket: process.env.AWS_S3_BUCKET_NAME,
+//         Key: key,
+//       };
+
+//       console.log("Deleting image with params:", params);
+
+//       const data = await s3.deleteObject(params).promise();
+
+//       if (data.$metadata.httpStatusCode === 204) {
+//         res.json({ message: "Image deleted successfully." });
+//       } else {
+//         console.error(`S3 DeleteObject failed with status code: ${data.$metadata.httpStatusCode}`);
+//         console.error("Response:", data);
+//         res.status(500).json({ message: "Error deleting image." });
+//       }
+
+//     } catch (error) {
+//       console.error("Error deleting image:", error);
+//       if (error.code === 'AccessDenied') {
+//         res.status(403).json({
+//           message: "Access denied. Please check IAM permissions, bucket policy, and ensure AWS credentials are correctly configured and the correct region is set.",
+//           error: error
+//         });
+//       } else {
+//         res.status(500).json({ message: "Error deleting image.", error });
+//       }
+//     }
+//   }); // End of authenticateJWT middleware
+// };
+
 export const deleteImage = async (req, res) => {
-  const { imageUrl } = req.body;
+  authenticateJWT(req, res, async () => {
+    const { imageUrl } = req.body;
 
-  if (!imageUrl) {
-    return res.status(400).json({ message: "Image URL is required." });
-  }
+    if (!imageUrl) {
+      return res.status(400).json({ message: "Image URL is required." });
+    }
 
-  try {
-    const key = imageUrl.split("amazonaws.com/")[1];
-    console.log("Key being used for deletion:", key);
+    try {
+      const parsedUrl = new URL(imageUrl);
+      const pathname = parsedUrl.pathname;
+      const key = pathname.substring(1);
 
-    const params = {
-      Bucket: process.env.AWS_S3_BUCKET_NAME,
-      Key: key,
-    };
+      const params = {
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: key,
+      };
 
-    console.log("Params for deletion:", params);
+      console.log(
+        "Deleting image with params:",
+        JSON.stringify(params, null, 2)
+      ); // <-- CRUCIAL LOGGING: Log params including Key
 
-    await s3.deleteObject(params).promise();
+      const data = await s3.deleteObject(params).promise();
 
-    res.json({ message: "Image deleted successfully." });
-  } catch (error) {
-    console.error("Error deleting image:", error);
-    res.status(500).json({ message: "Error deleting image.", error });
-  }
+      console.log("S3 DeleteObject Response:", JSON.stringify(data, null, 2)); // <-- Log the S3 response
+
+      if (data.$metadata.httpStatusCode === 204) {
+        res.json({ message: "Image deleted successfully." });
+      } else {
+        console.error(
+          `S3 DeleteObject failed with status code: ${data.$metadata.httpStatusCode}`
+        );
+        console.error("Response:", data);
+        res.status(500).json({ message: "Error deleting image." });
+      }
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      if (error.code === "AccessDenied") {
+        res.status(403).json({
+          message:
+            "Access denied. Please check IAM permissions, bucket policy, and ensure AWS credentials are correctly configured and the correct region is set.",
+          error: error,
+        });
+      } else {
+        res.status(500).json({ message: "Error deleting image.", error });
+      }
+    }
+  });
 };
 
 export const uploadImage = async (req, res) => {
@@ -191,40 +261,76 @@ export const deleteNews = async (req, res) => {
 export const getImage = async (req, res) => {
   const s3 = new AWS.S3();
 
-  // Define parameters for S3 bucket
   const params = {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
   };
 
   try {
-    // Get the list of objects in the S3 bucket
     const data = await s3.listObjectsV2(params).promise();
 
-    // Log the data to inspect its contents
-    console.log("S3 List Objects Response:", data);
-
     if (!data.Contents || data.Contents.length === 0) {
-      console.log("No images found.");
+      console.log("No images found in bucket.");
       return res.status(404).json({ message: "No images found" });
     }
 
-    // Map over the objects to create URLs (assuming you want to return URLs for images)
     const images = data.Contents.map((item) => {
-      // Log each item to see the file paths
-      console.log("Image item:", item);
-
-      // Assuming the image path is structured like 'uploads/<category>/image.jpg'
-      const category = item.Key.split("/")[1]; // Get the category name
+      const imageUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${item.Key}`;
 
       return {
-        url: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${item.Key}`,
-        category: category, // Use the category name derived from the key
+        url: imageUrl,
+        category: extractCategoryFromKey(item.Key),
       };
     });
 
     res.json({ images });
   } catch (err) {
-    console.error("Error fetching images:", err);
+    console.error("Error fetching images from S3:", err);
     res.status(500).json({ message: "Failed to load images" });
+  }
+};
+
+function extractCategoryFromKey(key) {
+  if (!key) return "uncategorized";
+
+  const parts = key.split("/");
+  if (parts.length >= 2) {
+    return parts[1];
+  } else if (parts.length === 1) {
+    return parts[0].split(".")[0];
+  } else {
+    return "uncategorized";
+  }
+}
+
+export const getSingleNews = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Attempt to find the news item by its MongoDB _id
+    const newsItem = await News.findOne({
+      "newsUpdates._id": id,
+    });
+
+    if (!newsItem) {
+      // If no news item is found, return a 404 error
+      return res.status(404).json({ message: "News item not found" });
+    }
+
+    // Find the specific news update inside the array
+    const foundNews = newsItem.newsUpdates.find(
+      (item) => item._id.toString() === id
+    );
+
+    if (!foundNews) {
+      return res.status(404).json({ message: "News update not found" });
+    }
+
+    // If the news item is found, return it in the response
+    res.json({ newsItem: foundNews });
+  } catch (error) {
+    console.error("Error fetching news item:", error);
+
+    // If there's an error during the process (e.g., invalid ID format or DB issues), return a 500 error
+    res.status(500).json({ message: "Error fetching news item" });
   }
 };

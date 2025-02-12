@@ -11,7 +11,7 @@ export const authenticateJWT = (req, res, next) => {
 
     jwt.verify(token, process.env.SECRET, (err, user) => {
       if (err) {
-        console.error("JWT Verification Error:", err); // Log the error
+        console.error("JWT Verification Error:", err);
         return res.sendStatus(403);
       }
 

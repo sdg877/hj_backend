@@ -13,22 +13,6 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-const uploadImageToS3 = async (fileBuffer, fileName, mimeType, category) => {
-  const params = {
-    Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Key: `uploads/${category}/${fileName}`,
-    Body: fileBuffer,
-    ContentType: mimeType,
-  };
-
-  try {
-    const data = await s3.upload(params).promise();
-    return data.Location;
-  } catch (error) {
-    throw new Error("Error uploading image to S3: " + error.message);
-  }
-};
-
 export const loginAdmin = (req, res) => {
   const { username, password } = req.body;
 
@@ -83,7 +67,7 @@ export const deleteImage = async (req, res) => {
 };
 
 export const uploadImage = async (req, res) => {
-  const { category } = req.body;
+  const { category, description } = req.body;
 
   if (!req.file) {
     return res.status(400).json({ message: "No file provided." });
@@ -102,13 +86,41 @@ export const uploadImage = async (req, res) => {
       fileBuffer,
       fileName,
       mimeType,
-      category
+      category,
+      description
     );
 
-    res.status(201).json({ message: "Image uploaded successfully", imageUrl });
+    res
+      .status(201)
+      .json({ message: "Image uploaded successfully", imageUrl, description });
   } catch (error) {
     console.error("Error uploading image:", error);
     res.status(500).json({ message: "Error uploading image" });
+  }
+};
+
+const uploadImageToS3 = async (
+  fileBuffer,
+  fileName,
+  mimeType,
+  category,
+  description
+) => {
+  const params = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Key: `uploads/${category}/${fileName}`,
+    Body: fileBuffer,
+    ContentType: mimeType,
+    Metadata: {
+      description: description || "",
+    },
+  };
+
+  try {
+    const data = await s3.upload(params).promise();
+    return data.Location;
+  } catch (error) {
+    throw new Error("Error uploading image to S3: " + error.message);
   }
 };
 
@@ -215,16 +227,30 @@ export const getImage = async (req, res) => {
       return res.status(404).json({ message: "No images found" });
     }
 
-    const images = data.Contents.map((item) => {
-      const imageUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${item.Key}`;
+    const images = await Promise.all(
+      data.Contents.map(async (item) => {
+        const headParams = {
+          Bucket: process.env.AWS_S3_BUCKET_NAME,
+          Key: item.Key,
+        };
 
-      return {
-        url: imageUrl,
-        category: extractCategoryFromKey(item.Key),
-      };
-    });
+        try {
+          const headData = await s3.headObject(headParams).promise();
+          const description = headData.Metadata?.description || "";
 
-    res.json({ images });
+          return {
+            url: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${item.Key}`,
+            category: extractCategoryFromKey(item.Key),
+            text: description, // Retrieve stored text
+          };
+        } catch (headError) {
+          console.error("Error retrieving metadata for:", item.Key, headError);
+          return null;
+        }
+      })
+    );
+
+    res.json({ images: images.filter(Boolean) });
   } catch (err) {
     console.error("Error fetching images from S3:", err);
     res.status(500).json({ message: "Failed to load images" });
@@ -248,17 +274,14 @@ export const getSingleNews = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Attempt to find the news item by its MongoDB _id
     const newsItem = await News.findOne({
       "newsUpdates._id": id,
     });
 
     if (!newsItem) {
-      // If no news item is found, return a 404 error
       return res.status(404).json({ message: "News item not found" });
     }
 
-    // Find the specific news update inside the array
     const foundNews = newsItem.newsUpdates.find(
       (item) => item._id.toString() === id
     );
@@ -267,12 +290,9 @@ export const getSingleNews = async (req, res) => {
       return res.status(404).json({ message: "News update not found" });
     }
 
-    // If the news item is found, return it in the response
     res.json({ newsItem: foundNews });
   } catch (error) {
     console.error("Error fetching news item:", error);
-
-    // If there's an error during the process (e.g., invalid ID format or DB issues), return a 500 error
     res.status(500).json({ message: "Error fetching news item" });
   }
 };

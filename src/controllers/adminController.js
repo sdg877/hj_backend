@@ -66,6 +66,34 @@ export const deleteImage = async (req, res) => {
   });
 };
 
+const uploadImageToS3 = async (
+  fileBuffer,
+  fileName,
+  mimeType,
+  category,
+  description
+) => {
+  const encodedDescription = description ? encodeURIComponent(description.trim()) : "";
+
+  const params = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Key: `uploads/${category}/${fileName}`,
+    Body: fileBuffer,
+    ContentType: mimeType,
+    Metadata: {
+      description: encodedDescription,
+    },
+  };
+
+  try {
+    const data = await s3.upload(params).promise();
+    return data.Location;
+  } catch (error) {
+    throw new Error("Error uploading image to S3: " + error.message);
+  }
+};
+
+
 export const uploadImage = async (req, res) => {
   const { category, description } = req.body;
 
@@ -96,31 +124,6 @@ export const uploadImage = async (req, res) => {
   } catch (error) {
     console.error("Error uploading image:", error);
     res.status(500).json({ message: "Error uploading image" });
-  }
-};
-
-const uploadImageToS3 = async (
-  fileBuffer,
-  fileName,
-  mimeType,
-  category,
-  description
-) => {
-  const params = {
-    Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Key: `uploads/${category}/${fileName}`,
-    Body: fileBuffer,
-    ContentType: mimeType,
-    Metadata: {
-      description: description || "",
-    },
-  };
-
-  try {
-    const data = await s3.upload(params).promise();
-    return data.Location;
-  } catch (error) {
-    throw new Error("Error uploading image to S3: " + error.message);
   }
 };
 

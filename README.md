@@ -95,9 +95,6 @@ About
 ![About 2](https://github.com/user-attachments/assets/ce33c3a2-022a-4d6a-85c3-35eb030ea3b0)
 
 
-Commissions
-![Commissions](https://github.com/user-attachments/assets/1240e558-8f4e-4987-9a69-85c55c3e43b8)
-
 Contact
 ![Contact](https://github.com/user-attachments/assets/eba2f4f8-249c-46c5-b316-50c16bad2d25)
 
